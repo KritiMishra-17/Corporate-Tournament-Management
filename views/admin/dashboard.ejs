@@ -1,0 +1,48 @@
+<!-- views/admin/dashboard.ejs -->
+<div class="dashboard">
+    <header>
+        <h1>Tournament Admin Dashboard</h1>
+        <form action="/auth/logout" method="POST">
+            <button type="submit">Logout</button>
+        </form>
+    </header>
+    
+    <section class="events-section">
+        <h2>Event Management</h2>
+        <form action="/admin/events" method="POST" class="event-form">
+            <input type="text" name="name" placeholder="Event Name" required>
+            <input type="date" name="date" required>
+            <input type="number" name="maxTeams" placeholder="Max Teams" required>
+            <textarea name="description" placeholder="Event Description"></textarea>
+            <button type="submit">Add Event</button>
+        </form>
+        
+        <div class="events-list">
+            <% if (events && events.length > 0) { %>
+                <% events.forEach(function(event) { %>
+                    <div class="event-card" data-event-id="<%= event._id %>">
+                        <h3><%= event.name %></h3>
+                        <p>Code: <%= event.code %></p>
+                        <p class="event-date" data-date="<%= event.date %>">
+                            Date: <%= new Date(event.date).toLocaleDateString() %>
+                        </p>
+                        <p class="event-max-teams" data-max-teams="<%= event.maxTeams %>">
+                            Registered Teams: <%= event.teams.length %> / <%= event.maxTeams %>
+                        </p>
+                        <p class="event-description" data-description="<%= event.description %>">
+                            <%= event.description %>
+                        </p>
+                        <div class="event-actions">
+                            <a href="/admin/events/<%= event._id %>/teams" class="btn">View Teams</a>
+                            <button onclick="editEvent('<%= event._id %>')" class="edit-btn">Edit</button>
+                            <button onclick="deleteEvent('<%= event._id %>')" class="delete-btn">Delete</button>
+                        </div>
+                    </div>
+                <% }); %>
+            <% } else { %>
+                <p>No events found</p>
+            <% } %>
+        </div>
+    </section>
+</div>
+<script src="/js/action.js"></script>

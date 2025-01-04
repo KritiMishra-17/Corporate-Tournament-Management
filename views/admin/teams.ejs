@@ -1,0 +1,28 @@
+<div class="teams-view">
+    <header>
+        <h1><%= event.name %> - Teams</h1>
+        <a href="/admin/dashboard">Back to Dashboard</a>
+    </header>
+
+    <div class="teams-list">
+        <% if (event.teams && event.teams.length > 0) { %>
+            <% event.teams.forEach(function(team) { %>
+                <div class="team-card">
+                    <h3>Team: <%= team.teamName %></h3>
+                    <p>Team Code: <%= team.teamCode %></p>
+                    <h4>Members:</h4>
+                    <ul>
+                        <% team.members.forEach(function(member) { %>
+                            <li>
+                                <span class="codename"><%= member.codeName %></span>
+                                <span class="realname">(<%= member.realName %>)</span>
+                            </li>
+                        <% }); %>
+                    </ul>
+                </div>
+            <% }); %>
+        <% } else { %>
+            <p>No teams registered yet</p>
+        <% } %>
+    </div>
+</div>
