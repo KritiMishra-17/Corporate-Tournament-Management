@@ -1,28 +1,31 @@
-<div class="teams-view">
-    <header>
-        <h1><%= event.name %> - Teams</h1>
-        <a href="/admin/dashboard">Back to Dashboard</a>
-    </header>
+<div class="teams-page">
+    <h1><%= event.name %> - Teams</h1>
+    <a href="/admin/dashboard" class="back-link">Back to Dashboard</a>
 
-    <div class="teams-list">
+    <div class="teams-container">
         <% if (event.teams && event.teams.length > 0) { %>
             <% event.teams.forEach(function(team) { %>
                 <div class="team-card">
-                    <h3>Team: <%= team.teamName %></h3>
-                    <p>Team Code: <%= team.teamCode %></p>
-                    <h4>Members:</h4>
-                    <ul>
-                        <% team.members.forEach(function(member) { %>
-                            <li>
-                                <span class="codename"><%= member.codeName %></span>
-                                <span class="realname">(<%= member.realName %>)</span>
-                            </li>
-                        <% }); %>
-                    </ul>
-                </div>
+                    <h2 class="team-name">Team: <%= team.teamName %></h2>
+                    <p class="team-code">Team Code: <%= team.teamCode || 'N/A' %></p>
+                    
+                    <div class="members-section">
+                        <h3>Members:</h3>
+                        <ul class="members-list">
+                            <% team.members.forEach(function(member) { %>
+                                <li class="member-item">
+                                    <span class="member-email"><%= member.email %></span>
+                                    <span class="member-codename">(<%= member.codeName %>)</span>
+                                </li>
+                            <% }); %>
+                        </ul>
+                    </div>
+                </div> 
             <% }); %>
         <% } else { %>
-            <p>No teams registered yet</p>
+            <p class="no-teams">No teams registered yet</p>
         <% } %>
     </div>
 </div>
+
+<script src="/utils/codenameGenerator.js"></script>

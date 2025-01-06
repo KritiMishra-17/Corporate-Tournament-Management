@@ -11,6 +11,7 @@ const Ad = require('./models/Ad');
 const Admin = require('./models/Admin');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const generateCodename= require('./utils/codenameGenerator');
 
 const app = express();
 
@@ -80,12 +81,69 @@ app.get('/admin/dashboard', auth, async (req, res) => {
 app.get('/admin/events/:id/teams', auth, async (req, res) => {
     try {
         const event = await Event.findById(req.params.id);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
         res.render('admin/teams', { 
             event,
             content: res.locals.body 
         });
     } catch (err) {
+        console.error('Error:', err);
         res.status(500).send('Server Error');
+    }
+});
+
+// registration endpoint
+app.post('/events/:id/register', async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id);
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found' });
+        }
+
+        // Check if max teams limit reached
+        if (event.teams.length >= event.maxTeams) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Maximum team limit reached' 
+            });
+        }
+
+        const { teamName, members } = req.body;
+        
+        // Generate team code
+        const teamCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        
+        // Create structured member data
+        const structuredMembers = members.map(email => ({
+            realName: email.split('@')[0], // Basic name extraction
+            email: email,
+            codeName: generateCodename() // Note: capital 'N' to match schema
+        }));
+        
+        const team = {
+            teamName: teamName, // Changed from name to teamName
+            teamCode: teamCode,
+            members: structuredMembers
+        };
+        
+        event.teams.push(team);
+        await event.save();
+        
+        // Return codenames mapping
+        const codenames = structuredMembers.map(member => ({
+            email: member.email,
+            codename: member.codeName
+        }));
+        
+        res.json({ 
+            success: true, 
+            codenames: codenames.map(c => `${c.email}: ${c.codename}`)
+        });
+    } catch (err) {
+        console.error('Registration error:', err);
+        res.status(500).json({ success: false, message: 'Registration failed' });
     }
 });
 
@@ -171,6 +229,42 @@ app.delete('/admin/ads/:id', auth, async (req, res) => {
         res.json({ message: 'Ad removed' });
     } catch (err) {
         res.status(500).json({ message: 'Server error' });
+    }
+});
+
+app.get('/dashboard', async (req, res) => {
+    try {
+        const events = await Event.find({ date: { $gte: new Date() } }).sort({ date: 1 });
+        const ads = await Ad.find().sort({ views: -1 }).limit(2); // Show 2 random ads
+        res.render('publicDashboard', { events, ads });
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+app.post('/events/:id/register', async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id);
+        const { teamName, members } = req.body;
+        
+        // Generate unique codenames for team members
+        const codenames = members.map(() => generateCodename());
+        
+        const team = {
+            name: teamName,
+            members: members.map((member, index) => ({
+                email: member,
+                codename: codenames[index]
+            }))
+        };
+        
+        event.teams.push(team);
+        await event.save();
+        
+        res.json({ success: true, codenames });
+    } catch (err) {
+        console.error('Registration error:', err);
+        res.status(500).json({ error: 'Registration failed' });
     }
 });
 

@@ -1,0 +1,127 @@
+<div class="public-dashboard">
+    <!-- Ad Section -->
+    <div class="ad-section">
+        <% ads.forEach(function(ad) { %>
+            <div class="ad-card">
+                <img src="<%= ad.imageUrl %>" alt="<%= ad.name %>" 
+                     onclick="trackAdView('<%= ad._id %>')" />
+            </div>
+        <% }); %>
+    </div>
+
+    <!-- Events Section -->
+    <div class="events-container">
+        <h1>Upcoming Events</h1>
+        
+        <div class="events-grid">
+            <% events.forEach(function(event) { %>
+                <div class="event-card">
+                    <h2><%= event.name %></h2>
+                    <p class="event-date">
+                        <%= new Date(event.date).toLocaleDateString() %>
+                    </p>
+                    <p class="event-description"><%= event.description %></p>
+                    <p class="team-count">
+                        Teams: <%= event.teams.length %> / <%= event.maxTeams %>
+                    </p>
+                    
+    
+                        <button onclick="showRegistrationForm('<%= event._id %>')" 
+                                class="register-btn">
+                            Register Team
+                        </button>
+                    
+    
+                    
+                </div>
+            <% }); %>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div id="registrationModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Team Registration</h2>
+            <form id="registrationForm">
+                <input type="hidden" id="eventId" name="eventId">
+                <div class="form-group">
+                    <label>Team Name</label>
+                    <input type="text" id="teamName" required>
+                </div>
+                <div id="memberInputs">
+                    <div class="form-group">
+                        <label>Member 1 Email</label>
+                        <input type="email" name="members[]" required>
+                    </div>
+                </div>
+                <button type="button" onclick="addMemberInput()">Add Member</button>
+                <button type="submit">Register Team</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function trackAdView(adId) {
+    fetch(`/admin/ads/${adId}/track`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' }
+    });
+}
+
+function showRegistrationForm(eventId) {
+    document.getElementById('eventId').value = eventId;
+    document.getElementById('registrationModal').style.display = 'block';
+}
+
+function addMemberInput() {
+    const memberInputs = document.getElementById('memberInputs');
+    const newInput = document.createElement('div');
+    newInput.className = 'form-group';
+    newInput.innerHTML = `
+        <label>Member ${memberInputs.children.length + 1} Email</label>
+        <input type="email" name="members[]" required>
+    `;
+    memberInputs.appendChild(newInput);
+}
+
+document.getElementById('registrationForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const eventId = document.getElementById('eventId').value;
+    const teamName = document.getElementById('teamName').value;
+    const memberInputs = document.querySelectorAll('[name="members[]"]');
+    const members = Array.from(memberInputs).map(input => input.value);
+
+    try {
+        const response = await fetch(`/events/${eventId}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ teamName, members })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            alert('Registration successful! Team member codenames:\n' + 
+                  data.codenames.join('\n'));
+            document.getElementById('registrationModal').style.display = 'none';
+            location.reload();
+        }
+    } catch (error) {
+        alert('Registration failed. Please try again.');
+    }
+};
+
+// Close modal when clicking the X or outside the modal
+document.querySelector('.close').onclick = () => {
+    document.getElementById('registrationModal').style.display = 'none';
+};
+
+window.onclick = (event) => {
+    const modal = document.getElementById('registrationModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+};
+</script>
+<script src="/utils/codenameGenerator.js"></script>

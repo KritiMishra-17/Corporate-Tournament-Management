@@ -5,11 +5,13 @@ const EventSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   description: String,
   code: { type: String, unique: true },
+  maxTeams: { type: Number, default: 10 },
   teams: [{
     teamName: String,
         teamCode: String,
         members: [{
             realName: String,
+            email: String,
             codeName: String
         }]
   }],
