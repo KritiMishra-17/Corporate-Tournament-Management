@@ -15,7 +15,23 @@
                             <% team.members.forEach(function(member) { %>
                                 <li class="member-item">
                                     <span class="member-email"><%= member.email %></span>
-                                    <span class="member-codename">(<%= member.codeName %>)</span>
+                                    <span class="member-codename">(<%= member.codeName || member.codename %>)</span>
+                                    
+                                    <!-- Certificate download buttons -->
+                                    <a href="/events/<%= event._id %>/teams/<%= team._id %>/members/<%= member._id %>/certificate" 
+                                       class="btn btn-primary btn-sm" 
+                                       target="_blank">
+                                        Download Participation Certificate
+                                    </a>
+                                    
+                                    <% if (event.winners && event.winners.find(w => w.teamId.toString() === team._id.toString())) { %>
+                                        <% const winner = event.winners.find(w => w.teamId.toString() === team._id.toString()); %>
+                                        <a href="/events/<%= event._id %>/teams/<%= team._id %>/members/<%= member._id %>/winner-certificate/<%= winner.position %>" 
+                                           class="btn btn-success btn-sm" 
+                                           target="_blank">
+                                            Download Winner Certificate
+                                        </a>
+                                    <% } %>
                                 </li>
                             <% }); %>
                         </ul>

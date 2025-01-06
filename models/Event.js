@@ -18,7 +18,11 @@ const EventSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  winners: [{
+    teamId: mongoose.Schema.Types.ObjectId,
+    position: String
+}]
 });
 
 module.exports = mongoose.model('Event', EventSchema);

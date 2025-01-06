@@ -12,8 +12,10 @@ const Admin = require('./models/Admin');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const generateCodename= require('./utils/codenameGenerator');
+const setupCertificateRoutes = require('./certificateGenerator');
 
 const app = express();
+setupCertificateRoutes(app);
 
 // Connect Database
 connectDB();
@@ -84,8 +86,17 @@ app.get('/admin/events/:id/teams', auth, async (req, res) => {
         if (!event) {
             return res.status(404).send('Event not found');
         }
+        
+        // Sort teams by registration date if needed
+        const sortedTeams = event.teams.sort((a, b) => 
+            new Date(b.createdAt) - new Date(a.createdAt)
+        );
+
         res.render('admin/teams', { 
-            event,
+            event: {
+                ...event._doc,
+                teams: sortedTeams
+            },
             content: res.locals.body 
         });
     } catch (err) {
@@ -111,19 +122,44 @@ app.post('/events/:id/register', async (req, res) => {
         }
 
         const { teamName, members } = req.body;
+
+        // Validate input
+        if (!teamName || !members || !Array.isArray(members)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid registration data'
+            });
+        }
+
+        // Check for duplicate emails
+        const existingEmails = event.teams.flatMap(team => 
+            team.members.map(member => member.email.toLowerCase())
+        );
         
+        const newEmails = members.map(member => member.email.toLowerCase());
+        const duplicateEmails = newEmails.filter(email => 
+            existingEmails.includes(email)
+        );
+
+        if (duplicateEmails.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Email(s) ${duplicateEmails.join(', ')} already registered`
+            });
+        }
+
         // Generate team code
         const teamCode = Math.random().toString(36).substring(2, 8).toUpperCase();
         
-        // Create structured member data
-        const structuredMembers = members.map(email => ({
-            realName: email.split('@')[0], // Basic name extraction
-            email: email,
-            codeName: generateCodename() // Note: capital 'N' to match schema
+        // Create structured member data with real names
+        const structuredMembers = members.map(member => ({
+            realName: member.realName,
+            email: member.email.toLowerCase(),
+            codeName: generateCodename()
         }));
         
         const team = {
-            teamName: teamName, // Changed from name to teamName
+            teamName: teamName,
             teamCode: teamCode,
             members: structuredMembers
         };
@@ -131,21 +167,62 @@ app.post('/events/:id/register', async (req, res) => {
         event.teams.push(team);
         await event.save();
         
-        // Return codenames mapping
-        const codenames = structuredMembers.map(member => ({
+        // Return member details with codenames
+        const memberDetails = structuredMembers.map(member => ({
+            realName: member.realName,
             email: member.email,
-            codename: member.codeName
+            codeName: member.codeName
         }));
         
         res.json({ 
             success: true, 
-            codenames: codenames.map(c => `${c.email}: ${c.codename}`)
+            members: memberDetails,
+            teamCode: teamCode
         });
     } catch (err) {
         console.error('Registration error:', err);
         res.status(500).json({ success: false, message: 'Registration failed' });
     }
 });
+
+app.get('/events/:eventId/teams/:teamCode', async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.eventId);
+        if (!event) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Event not found' 
+            });
+        }
+
+        const team = event.teams.find(t => t.teamCode === req.params.teamCode);
+        if (!team) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Team not found' 
+            });
+        }
+
+        res.json({
+            success: true,
+            team: {
+                teamName: team.teamName,
+                teamCode: team.teamCode,
+                members: team.members.map(member => ({
+                    realName: member.realName,
+                    codeName: member.codeName
+                }))
+            }
+        });
+    } catch (err) {
+        console.error('Team lookup error:', err);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error during team lookup' 
+        });
+    }
+});
+
 
 // Event Routes
 app.post('/admin/events', auth, async (req, res) => {
